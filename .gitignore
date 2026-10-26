@@ -1,0 +1,16 @@
+# SQL Server 数据与日志文件
+*.mdf
+*.ndf
+*.ldf
+*.bak
+*.trn
+
+# SSMS 用户设置
+*.ssmssln
+*.suo
+.vs/
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store
