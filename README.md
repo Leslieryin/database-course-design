@@ -1,5 +1,7 @@
 # SQL Server 数据库课程设计
 
+> **EN** — Two SQL Server databases from a database course design — hospital registration and car rental — covering constraints, joins, subqueries, indexes, views and triggers.
+
 两个 SQL Server 数据库设计：一个面向医疗挂号业务，一个面向租车业务。脚本以 T-SQL 编写，在 SSMS 中按批执行。
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
