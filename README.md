@@ -4,6 +4,7 @@
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![platform](https://img.shields.io/badge/SQL%20Server-2016%2B-CC2927)
+![CI](https://github.com/Leslieryin/database-course-design/actions/workflows/ci.yml/badge.svg)
 
 ## 目录
 
