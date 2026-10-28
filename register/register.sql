@@ -248,7 +248,10 @@ ALTER INDEX IX_患者姓名 ON 患者1 DISABLE
 GO
 ALTER INDEX IX_患者姓名 ON 患者1 REBUILD
 GO
-EXECUTE sp_rename '科室.IX_科室名称_科室地址','IX_DENAME_DEADDRESS','INDEX'
+/* 索引重命名。@objname 必须写成 schema.表.索引，
+   少写 schema 会让服务端把「科室」当成 schema、索引名当成表，
+   报 Msg 15248（@objname 有歧义）。 */
+EXECUTE sp_rename N'dbo.科室.IX_科室名称_科室地址', N'IX_DENAME_DEADDRESS', N'INDEX'
 GO
 
 USE register

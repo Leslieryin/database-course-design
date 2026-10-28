@@ -64,6 +64,19 @@ jobs:
             exit 1
           fi
 
+      - name: 【诊断】一次收集所有错误（不阻断）
+        continue-on-error: true
+        run: |
+          # 带 -b 会遇错即停，一个问题一轮，太慢。
+          # 这一遍故意不用 -b，把全部错误一次打出来，方便集中修。
+          set +e
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -i register/register.sql > /tmp/reg.log 2>&1
+          echo "=== 错误清单 ==="
+          grep -E "^Msg [0-9]+" /tmp/reg.log | sort | uniq -c | sort -rn | head -30 || echo "（无 Msg 行）"
+          echo ""
+          echo "=== 前 3 个错误的完整上下文 ==="
+          grep -A2 -E "^Msg [0-9]+" /tmp/reg.log | head -20 || true
+
       - name: 执行 register.sql
         run: |
           sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i register/register.sql
