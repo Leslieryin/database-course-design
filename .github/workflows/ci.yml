@@ -70,7 +70,7 @@ jobs:
           # 带 -b 会遇错即停，一个问题一轮，太慢。
           # 这一遍故意不用 -b，把全部错误一次打出来，方便集中修。
           set +e
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -i register/register.sql > /tmp/reg.log 2>&1
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -i register/register.sql > /tmp/reg.log 2>&1
           echo "=== 错误清单 ==="
           grep -E "^Msg [0-9]+" /tmp/reg.log | sort | uniq -c | sort -rn | head -30 || echo "（无 Msg 行）"
           echo ""
@@ -79,21 +79,21 @@ jobs:
 
       - name: 执行 register.sql
         run: |
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i register/register.sql
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -i register/register.sql
 
       - name: 验收对象是否真的建出来了
         run: |
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i scripts/verify_register.sql
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -i scripts/verify_register.sql
 
       - name: rent：先造桩库再执行
         run: |
           # rent.sql 开头找不到 rent 库就 RETURN，不造库等于没测
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i scripts/stub_rent.sql
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i rent/rent.sql
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -i scripts/stub_rent.sql
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -i rent/rent.sql
 
       - name: 确认 rent 的约束确实加上了
         run: |
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -d rent -Q "
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -d rent -Q "
             SET NOCOUNT ON;
             DECLARE @missing NVARCHAR(MAX) = N'';
             IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = N'UQ_租车公司名称')
