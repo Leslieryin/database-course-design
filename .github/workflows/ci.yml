@@ -30,6 +30,11 @@ jobs:
           ACCEPT_EULA: "Y"
           MSSQL_SA_PASSWORD: "CiTest!Passw0rd"
           MSSQL_PID: "Developer"
+          # 容器默认排序规则是 Latin1，中文会变成 ??。
+          # 这个脚本的表名、约束名、默认值全是中文，原课设也是跑在
+          # 中文排序规则的实例上，所以这里把实例拉回那个环境。
+          # 注意：只在数据卷为空（首次初始化）时生效。
+          MSSQL_COLLATION: "Chinese_PRC_CI_AS"
         ports:
           - 1433:1433
         options: >-
@@ -51,6 +56,17 @@ jobs:
           sudo apt-get update -qq
           sudo ACCEPT_EULA=Y apt-get install -y -qq mssql-tools18 unixodbc-dev
           echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
+
+      - name: 确认实例用的是中文排序规则
+        run: |
+          # 如果 MSSQL_COLLATION 没生效，中文标识符会变 ?，
+          # 后面的报错就全是假象，先在这里确认环境对不对。
+          out=$(sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -h -1 -W -Q "SELECT CONVERT(varchar(128), SERVERPROPERTY('Collation'))")
+          echo "实例排序规则: $out"
+          case "$out" in
+            *Chinese_PRC*) echo "✓ 中文排序规则已生效" ;;
+            *) echo "::error::排序规则不是中文，MSSQL_COLLATION 没生效"; exit 1 ;;
+          esac
 
       - name: 把脚本里的 Windows 路径换成 Linux 路径
         run: |
