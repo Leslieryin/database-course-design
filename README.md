@@ -125,9 +125,9 @@ erDiagram
 
 ```sql
 -- 方式一：SSMS 打开脚本，F5 执行
--- 方式二：命令行
-sqlcmd -S localhost -E -i register\register.sql
-sqlcmd -S localhost -E -i rent\rent.sql
+-- 方式二：命令行（注意 -f 65001：脚本是 UTF-8，不加会让中文标识符变 ??）
+sqlcmd -S localhost -E -f 65001 -i register\register.sql
+sqlcmd -S localhost -E -f 65001 -i rent\rent.sql
 ```
 
 `register.sql` 开头带幂等保护，重复执行会先 `DROP DATABASE` 再重建：
@@ -142,6 +142,28 @@ GO
 ```
 
 ---
+
+## CI 验证
+
+CI 不止数 `CREATE` 语句的个数——它会起一个 SQL Server 2022 容器，真的把库建出来，再验收对象、试插非法数据看约束拦不拦。
+
+真跑之后暴露出一批**脚本本身跑不通**的问题（这些问题静态检查永远看不见，因为脚本以前一直是分段在 SSMS 里执行、从没整体跑过）：
+
+- `CREATE DATABASE` 后面缺 `GO`，紧跟了 `ALTER DATABASE` —— 建库语句必须独占一个批处理
+- `ALTER DATABASE ... ADD FILE` 后面同样缺 `GO`，直接跟了 `USE`
+- `患者1` 表 `CONSTRAINT CK_age1` 后多了一个逗号，紧接右括号
+- `医生` 表 `职称 NCHAR(10) NOT NULL` 后面缺逗号，直接跟 `FOREIGN KEY`
+- `挂号` 表 `CONSTRAINT CK_order` 后同样多了逗号
+- `sp_rename` 的字符串被换行切成了两行 —— T-SQL 的字符串字面量不能跨行
+- `sp_rename` 的 `@objname` 少了 schema 前缀，服务端把「科室」当成了 schema（Msg 15248）
+- 脚本中段误粘了三段 `USE rent` 的租车查询（Msg 911），已移除
+
+跑 CI 时还会撞上两个环境问题，README 里一并记下：
+
+1. **实例排序规则**。容器默认 `Latin1`，中文标识符和 `sp_bindrule 'RL_职称'` 这类字符串参数会变成 `??`。CI 用 `MSSQL_COLLATION=Chinese_PRC_CI_AS` 还原原课设的环境，并先断言排序规则确实生效，避免把环境问题误判成脚本问题。
+2. **输入编码**。`sqlcmd` 默认按系统代码页读文件，UTF-8 的脚本要显式 `-f 65001`。
+
+验收脚本 `scripts/verify_register.sql` 会检查 4 表 / 2 索引 / 2 视图 / 1 过程 / 1 触发器 / 5 约束是否真的存在，并插入一条非法性别的记录确认 `CK_sex1` 真的拦得住。`rent.sql` 因为没有建表语句（原课设在 SSMS 里手工建库），CI 用 `scripts/stub_rent.sql` 造最小桩库再跑，否则它开头的 `IF DB_ID('rent') IS NULL RETURN` 会让测试永远"成功"。
 
 ## 本次整理所做的改动
 
