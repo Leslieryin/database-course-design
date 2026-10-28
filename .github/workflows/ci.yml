@@ -95,7 +95,22 @@ jobs:
 
       - name: 执行 register.sql
         run: |
-          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 -b -i register/register.sql
+          # 脚本末尾的 TRIG_科室 故意 RAISERROR（演示"插入会被拦"），
+          # 所以不能要求全程零报错，否则等于逼着人删掉那个演示。
+          # 这里只放行 Msg 50000，其余任何错误都算失败；
+          # 对象到底建没建齐，交给下一步的验收脚本判断。
+          set +e
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -f 65001 \
+            -i register/register.sql > /tmp/reg2.log 2>&1
+          rc=$?
+          echo "sqlcmd 退出码: $rc"
+          unexpected=$(grep -E "^Msg [0-9]+" /tmp/reg2.log | grep -v "Msg 50000" || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::出现了非预期错误："
+            echo "$unexpected" | head -10
+            exit 1
+          fi
+          echo "✓ 只出现了预期的触发器 RAISERROR（Msg 50000）"
 
       - name: 验收对象是否真的建出来了
         run: |

@@ -302,26 +302,10 @@ GO
 EXECUTE sp_bindefault 'DF_职称','医生.职称'
 GO
 
-USE rent
-GO
-DECLARE @var1 varchar(10)
-SELECT @var1=租车公司名称 FROM 租车公司 WHERE 租车公司编号='F001' 
-SELECT @var1 AS'租车公司名称'
-GO
-
-USE rent
-GO
-DECLARE @var1 varchar(10)
-SELECT @var1=租车公司名称 FROM 租车公司 ORDER BY 租车公司编号
-SELECT @var1 AS'租车公司名称'
-GO
-
-USE rent
-GO
-DECLARE @var1 varchar(10)
-SET @var1='艺博租车'
-SELECT 租车公司编号,租车公司名称 FROM 租车公司 WHERE 租车公司名称=@var1 
-GO
+/* 这里原本有三段 USE rent 的租车查询（查租车公司名称、按条件筛选），
+   与本脚本的医疗挂号业务无关，且 rent 库在跑 register 时并不存在，
+   必然报 Msg 911。属于整理时误粘的内容，已移除——租车相关的查询在
+   rent/rent.sql 里是完整的。 */
 
 SELECT @@version AS 版本号
 GO
