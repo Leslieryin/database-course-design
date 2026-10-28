@@ -3,9 +3,11 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  sql:
+  static:
+    name: 静态结构检查
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,3 +18,76 @@ jobs:
 
       - name: 检查脚本结构
         run: python scripts/check_sql.py
+
+  execute:
+    name: 真跑（SQL Server 2022）
+    runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "CiTest!Passw0rd"
+          MSSQL_PID: "Developer"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 30s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 sqlcmd
+        run: |
+          curl -sSL https://packages.microsoft.com/keys/microsoft.asc \
+            | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc > /dev/null
+          curl -sSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
+            | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+          sudo apt-get update -qq
+          sudo ACCEPT_EULA=Y apt-get install -y -qq mssql-tools18 unixodbc-dev
+          echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
+
+      - name: 把脚本里的 Windows 路径换成 Linux 路径
+        run: |
+          # 原脚本往 C:\SQLData\ 写数据文件，Linux runner 上没有这个盘。
+          # 只动 CREATE DATABASE 里的 FILENAME，别的不管。
+          sed -i 's|C:\\SQLData\\|/var/opt/mssql/data/|g' register/register.sql
+          echo "替换后的数据文件路径："
+          grep -o "FILENAME='[^']*'" register/register.sql | head -5
+          if grep -q 'C:\\SQLData' register/register.sql; then
+            echo "::error::还有残留的 Windows 路径"
+            exit 1
+          fi
+
+      - name: 执行 register.sql
+        run: |
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i register/register.sql
+
+      - name: 验收对象是否真的建出来了
+        run: |
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i scripts/verify_register.sql
+
+      - name: rent：先造桩库再执行
+        run: |
+          # rent.sql 开头找不到 rent 库就 RETURN，不造库等于没测
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i scripts/stub_rent.sql
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -i rent/rent.sql
+
+      - name: 确认 rent 的约束确实加上了
+        run: |
+          sqlcmd -S localhost -U sa -P 'CiTest!Passw0rd' -C -b -d rent -Q "
+            SET NOCOUNT ON;
+            DECLARE @missing NVARCHAR(MAX) = N'';
+            IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = N'UQ_租车公司名称')
+                SET @missing += N'缺 UQ_租车公司名称; ';
+            IF NOT EXISTS (SELECT 1 FROM sys.default_constraints WHERE name = N'DF_价格')
+                SET @missing += N'缺 DF_价格; ';
+            IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_时间')
+                SET @missing += N'缺 CK_时间; ';
+            IF @missing <> N'' THROW 50001, @missing, 1;
+            PRINT N'✓ rent：3 个约束全部就位';"

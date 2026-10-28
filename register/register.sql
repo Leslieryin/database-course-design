@@ -16,10 +16,14 @@ LOG ON
 SIZE=4MB,FILEGROWTH=15%),
 (NAME=register_log2,FILENAME='C:\SQLData\register_log2.1df',
 SIZE=3MB,FILEGROWTH=1MB)
+GO
+
 ALTER DATABASE register
 ADD FILE
 (NAME=register_data2,FILENAME='C:\SQLData\register_data2.ndf',
 SIZE=5MB,MAXSIZE=50MB,FILEGROWTH=1MB)
+GO
+
 USE register 
 GO
 CREATE TABLE 患者1 
@@ -31,7 +35,7 @@ CREATE TABLE 患者1
 CONSTRAINT CK_sex1
     CHECK(患者性别 in('M','F')),
 CONSTRAINT CK_age1
-    CHECK(患者年龄>0 and 患者年龄<130), 
+    CHECK(患者年龄>0 and 患者年龄<130)
 )
 CREATE TABLE 科室
 (
@@ -49,7 +53,7 @@ CREATE TABLE 医生
 医生电话 CHAR(11)NOT NULL,
 月工资 FLOAT NOT NULL,
 科室编号 CHAR(4)NOT NULL, 
-职称 NCHAR(10)NOT NULL
+职称 NCHAR(10)NOT NULL,
 FOREIGN KEY(科室编号)REFERENCES 科室(科室编号), 
 CONSTRAINT CK_money CHECK(月工资>0),
 CONSTRAINT CK_phone1
@@ -64,7 +68,7 @@ CREATE TABLE 挂号
 PRIMARY KEY(患者编号,医生编号),
 FOREIGN KEY(患者编号)REFERENCES 患者1(患者编号),
 FOREIGN KEY(医生编号)REFERENCES 医生(医生编号), 
-CONSTRAINT CK_order CHECK(排队号>0),
+CONSTRAINT CK_order CHECK(排队号>0)
 )
 GO
 USE register
