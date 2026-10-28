@@ -248,8 +248,8 @@ ALTER INDEX IX_患者姓名 ON 患者1 DISABLE
 GO
 ALTER INDEX IX_患者姓名 ON 患者1 REBUILD
 GO
-EXECUTE sp_rename '科室.IX_科室名称_科室地址','
-IX_DENAME_DEADDRESS','INDEX'
+EXECUTE sp_rename '科室.IX_科室名称_科室地址','IX_DENAME_DEADDRESS','INDEX'
+GO
 
 USE register
 GO

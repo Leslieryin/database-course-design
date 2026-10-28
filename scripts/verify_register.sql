@@ -16,11 +16,13 @@ IF OBJECT_ID(N'dbo.科室', N'U') IS NULL SET @missing += N'缺表 科室; ';
 IF OBJECT_ID(N'dbo.医生', N'U') IS NULL SET @missing += N'缺表 医生; ';
 IF OBJECT_ID(N'dbo.挂号', N'U') IS NULL SET @missing += N'缺表 挂号; ';
 
-/* 两个索引 */
+/* 两个索引。
+   注意 IX_科室名称_科室地址 在脚本里被 sp_rename 重命名成了 IX_DENAME_DEADDRESS，
+   所以这里验的是改名后的名字。 */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_患者姓名')
     SET @missing += N'缺索引 IX_患者姓名; ';
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_科室名称_科室地址')
-    SET @missing += N'缺索引 IX_科室名称_科室地址; ';
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DENAME_DEADDRESS')
+    SET @missing += N'缺索引 IX_DENAME_DEADDRESS（原 IX_科室名称_科室地址）; ';
 
 /* 两个视图 */
 IF OBJECT_ID(N'dbo.VIEW_科室信息', N'V') IS NULL SET @missing += N'缺视图 VIEW_科室信息; ';
